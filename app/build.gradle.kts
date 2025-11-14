@@ -77,9 +77,8 @@ dependencies {
     // Firebase Realtime Database (para GPS)
     implementation("com.google.firebase:firebase-database-ktx:21.0.0")
 
-    // Google Maps Compose (para mostrar mapa)
-    implementation("com.google.maps.android:maps-compose:6.12.0")
-    implementation("com.google.maps.android:maps-compose-utils:6.12.0")
+    // Google Maps Compose
+    implementation("com.google.maps.android:maps-compose:4.3.0")
 
     // Google Play Services Maps
     implementation("com.google.android.gms:play-services-maps:18.2.0")
