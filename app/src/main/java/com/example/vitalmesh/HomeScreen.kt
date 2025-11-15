@@ -29,6 +29,9 @@ import com.example.vitalmesh.navigation.NavigationGraph
 import com.example.vitalmesh.profile.MilitaryProfileScreen
 import com.example.vitalmesh.profile.MilitaryProfileViewModel
 
+import com.example.vitalmesh.gpsmap.GPSScreen
+
+
 
 data class TabItem(val label: String, val icon: ImageVector)
 
@@ -146,7 +149,7 @@ fun HomeScreen(
                 0 -> {
                     NavigationGraph(navController)
                 }
-                1 -> ChatContent(user)  // Llama el mapa del sensor GPS
+                1 -> GPSScreen()  // Llama el mapa del sensor GPS
                 2 -> ChatContent(user)
                 3 -> MilitaryProfileScreen(
                     viewModel = militaryProfileViewModel,
