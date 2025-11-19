@@ -10,6 +10,7 @@ class SensorViewModel : ViewModel() {
 
     private val database = FirebaseDatabase.getInstance()
     private val sensorsRef = database.getReference("sensors/actual")
+    private val historialRef = database.getReference("sensors/historial")
 
     // StateFlows para cada sensor
     private val _dht22Data = MutableStateFlow<DHT22Data?>(null)
@@ -24,14 +25,19 @@ class SensorViewModel : ViewModel() {
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    // StateFlow para datos históricos del GSR (últimas 50 muestras)
+    private val _gsrHistoricalData = MutableStateFlow<List<GSRHistoricalPoint>>(emptyList())
+    val gsrHistoricalData: StateFlow<List<GSRHistoricalPoint>> = _gsrHistoricalData
+
     private val listeners = mutableListOf<ValueEventListener>()
 
     init {
         startListeningToSensors()
+        loadGSRHistoricalData()
     }
 
     private fun startListeningToSensors() {
-        // Listener para DHT22 - Ahora el mapeo es automático
+        // Listener para DHT22
         val dht22Listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 try {
@@ -92,9 +98,39 @@ class SensorViewModel : ViewModel() {
         listeners.add(imuListener)
     }
 
+    private fun loadGSRHistoricalData() {
+        // Obtener las últimas 50 muestras
+        historialRef.orderByKey().limitToLast(50).addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                try {
+                    val dataPoints = mutableListOf<GSRHistoricalPoint>()
+                    var sampleNumber = 1
+
+                    for (childSnapshot in snapshot.children) {
+                        val gsrSnapshot = childSnapshot.child("GSR")
+                        val stressLevel = gsrSnapshot.child("stress_level_0_100").getValue(Double::class.java)
+
+                        if (stressLevel != null) {
+                            dataPoints.add(GSRHistoricalPoint(sampleNumber.toLong(), stressLevel))
+                            sampleNumber++
+                        }
+                    }
+
+                    _gsrHistoricalData.value = dataPoints
+                    Log.d("SensorViewModel", "GSR Historical Data loaded: ${dataPoints.size} samples")
+                } catch (e: Exception) {
+                    Log.e("SensorViewModel", "Error loading GSR historical data", e)
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("SensorViewModel", "GSR historical listener cancelled", error.toException())
+            }
+        })
+    }
+
     override fun onCleared() {
         super.onCleared()
-        // Remover todos los listeners
         listeners.forEach { listener ->
             sensorsRef.removeEventListener(listener)
         }
@@ -102,3 +138,10 @@ class SensorViewModel : ViewModel() {
         Log.d("SensorViewModel", "ViewModel cleared, listeners removed")
     }
 }
+
+// Modelo para puntos históricos del GSR
+// Ahora "timestamp" es solo el número de muestra
+data class GSRHistoricalPoint(
+    val sampleNumber: Long,  // Número de muestra (1, 2, 3, ...)
+    val stressLevel: Double
+)

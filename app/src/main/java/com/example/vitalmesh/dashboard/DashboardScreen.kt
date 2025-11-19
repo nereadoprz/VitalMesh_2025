@@ -21,8 +21,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vitalmesh.R
+import kotlin.math.sqrt
 
-// Enums y data classes necesarios
+// Enums and data classes
 enum class SensorStatus {
     NORMAL, WARNING, CRITICAL, OFFLINE
 }
@@ -39,7 +40,7 @@ data class SensorData(
 @Composable
 fun DashboardScreen(
     onSensorClick: (String) -> Unit,
-    viewModel: SensorViewModel = viewModel()  // ← Ya NO necesita import, está en el mismo paquete
+    viewModel: SensorViewModel = viewModel()
 ) {
     val dht22Data by viewModel.dht22Data.collectAsState()
     val gsrData by viewModel.gsrData.collectAsState()
@@ -56,22 +57,49 @@ fun DashboardScreen(
         return
     }
 
-    // Crear lista de sensores con datos reales de Firebase
+    // Calculate IMU magnitudes
+    val imuMagnitude = imuData?.let {
+        sqrt(it.accel_g.x * it.accel_g.x +
+                it.accel_g.y * it.accel_g.y +
+                it.accel_g.z * it.accel_g.z)
+    } ?: 0.0
+
+    val gyroMagnitude = imuData?.let {
+        sqrt(it.gyro_deg_s.x * it.gyro_deg_s.x +
+                it.gyro_deg_s.y * it.gyro_deg_s.y +
+                it.gyro_deg_s.z * it.gyro_deg_s.z)
+    } ?: 0.0
+
+    val movementState = when {
+        imuData == null -> "Offline"
+        imuMagnitude < 0.2 -> "⚠️ Free Fall"
+        imuMagnitude in 0.8..1.2 && gyroMagnitude < 10 -> "Stationary"
+        gyroMagnitude > 50 -> "Rotating"
+        imuMagnitude > 2.0 -> "Active"
+        else -> "🚶 Moving"
+    }
+
+    // Create sensor list with real Firebase data
     val sensors = listOf(
         SensorData(
             name = "Heart Rate",
             icon = Icons.Filled.Favorite,
-            currentValue = dht22Data?.temperature_C?.toString() ?: "--",
-            unit = "°C / ${dht22Data?.humidity_percent?.toInt() ?: "--"}% RH",
-            status = if (dht22Data != null) SensorStatus.NORMAL else SensorStatus.OFFLINE,
-            description = "Temperature & Humidity"
+            currentValue = "72",  // Static
+            unit = "BPM",
+            status = SensorStatus.NORMAL,
+            description = "Cardiovascular monitoring"
         ),
         SensorData(
             name = "IMU",
             icon = Icons.Filled.Explore,
-            currentValue = String.format("%.2f", imuData?.accel_g?.x ?: 0.0),
-            unit = "g (accel-x)",
-            status = if (imuData != null) SensorStatus.NORMAL else SensorStatus.OFFLINE,
+            currentValue = movementState,
+            unit = String.format("%.2f g", imuMagnitude),
+            status = when {
+                imuData == null -> SensorStatus.OFFLINE
+                imuMagnitude < 0.2 -> SensorStatus.CRITICAL
+                gyroMagnitude > 50 -> SensorStatus.WARNING
+                else -> SensorStatus.NORMAL
+            },
             description = "Motion & orientation"
         ),
         SensorData(
@@ -91,7 +119,7 @@ fun DashboardScreen(
             name = "GPS",
             icon = Icons.Filled.LocationOn,
             currentValue = "--",
-            unit = "No disponible",
+            unit = "Not available",
             status = SensorStatus.OFFLINE,
             description = "Location tracking"
         )
@@ -139,7 +167,7 @@ fun DashboardScreen(
                     modifier = Modifier.weight(1f)
                 )
                 SensorCard(
-                    sensor = sensors[0], // Heart Rate (DHT22)
+                    sensor = sensors[0], // Heart Rate
                     onClick = { onSensorClick("HeartRate") },
                     modifier = Modifier.weight(1f)
                 )
