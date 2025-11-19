@@ -78,7 +78,6 @@ fun HeartRateDetailScreen(onBackClick: () -> Unit) {
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
-
                     HeartRateInfoRow("Minimum (today):", "62 BPM")
                     HeartRateInfoRow("Maximum (today):", "92 BPM")
                     HeartRateInfoRow("Average (today):", "74 BPM")
@@ -88,7 +87,6 @@ fun HeartRateDetailScreen(onBackClick: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
             // Chart placeholder
             Card(
                 modifier = Modifier

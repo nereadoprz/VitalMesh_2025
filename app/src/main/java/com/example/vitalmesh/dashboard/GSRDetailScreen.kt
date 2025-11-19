@@ -1,4 +1,3 @@
-// ui/dashboard/GSRDetailScreen.kt
 package com.example.vitalmesh.dashboard
 
 import androidx.compose.foundation.background
@@ -7,17 +6,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vitalmesh.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GSRDetailScreen(onBackClick: () -> Unit) {
+fun GSRDetailScreen(
+    onBackClick: () -> Unit,
+    viewModel: SensorViewModel = viewModel()
+) {
+    val gsrData by viewModel.gsrData.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -53,7 +59,7 @@ fun GSRDetailScreen(onBackClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Stress Level",
+                text = "Stress Level Monitoring",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = colorResource(id = R.color.military_khaki)
@@ -69,35 +75,18 @@ fun GSRDetailScreen(onBackClick: () -> Unit) {
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    GSRInfoRow("Current Conductance:", "2.8 μS")
-                    GSRInfoRow("Stress Level:", "Moderate ⚠️")
-                    GSRInfoRow("Status:", "Increasing")
-                    GSRInfoRow("Minimum (today):", "1.2 μS")
-                    GSRInfoRow("Maximum (today):", "3.5 μS")
-                    GSRInfoRow("Average (today):", "2.1 μS")
-                }
-            }
+                    GSRInfoRow("Conductance:", "${gsrData?.conductance_uS ?: "--"} μS")
+                    GSRInfoRow("Resistance:", "${gsrData?.resistance_kOhm ?: "--"} kΩ")
+                    GSRInfoRow("Stress Level:", "${gsrData?.stress_level_0_100?.toInt() ?: "--"} / 100")
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Chart placeholder
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = colorResource(id = R.color.card_background)
-                )
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "📊 Stress Chart (Last 24h)",
-                        color = colorResource(id = R.color.military_khaki),
-                        fontSize = 14.sp
-                    )
+                    val stressLevel = gsrData?.stress_level_0_100 ?: 0.0
+                    val stressStatus = when {
+                        stressLevel > 70 -> "High ⚠️"
+                        stressLevel > 50 -> "Moderate ⚠️"
+                        stressLevel > 30 -> "Low ✅"
+                        else -> "Very Low ✅"
+                    }
+                    GSRInfoRow("Status:", stressStatus)
                 }
             }
         }
@@ -112,13 +101,13 @@ fun GSRInfoRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            color = colorResource(id = R.color.military_khaki).copy(alpha = 0.7f),
-            fontSize = 14.sp
+            color = colorResource(id = R.color.military_khaki),
+            fontSize = 16.sp
         )
         Text(
             text = value,
             color = colorResource(id = R.color.military_khaki),
-            fontSize = 14.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold
         )
     }

@@ -9,14 +9,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vitalmesh.R
+
+// Enums y data classes necesarios
+enum class SensorStatus {
+    NORMAL, WARNING, CRITICAL, OFFLINE
+}
 
 data class SensorData(
     val name: String,
@@ -27,46 +36,64 @@ data class SensorData(
     val description: String
 )
 
-enum class SensorStatus {
-    NORMAL, WARNING, CRITICAL, OFFLINE
-}
-
 @Composable
 fun DashboardScreen(
-    onSensorClick: (String) -> Unit
+    onSensorClick: (String) -> Unit,
+    viewModel: SensorViewModel = viewModel()  // ← Ya NO necesita import, está en el mismo paquete
 ) {
+    val dht22Data by viewModel.dht22Data.collectAsState()
+    val gsrData by viewModel.gsrData.collectAsState()
+    val imuData by viewModel.imuData.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    // Crear lista de sensores con datos reales de Firebase
     val sensors = listOf(
         SensorData(
-            name = "GPS",
-            icon = Icons.Filled.LocationOn,
-            currentValue = "34.0522° N",
-            unit = "118.2437° W",
-            status = SensorStatus.NORMAL,
-            description = "Location tracking"
+            name = "Heart Rate",
+            icon = Icons.Filled.Favorite,
+            currentValue = dht22Data?.temperature_C?.toString() ?: "--",
+            unit = "°C / ${dht22Data?.humidity_percent?.toInt() ?: "--"}% RH",
+            status = if (dht22Data != null) SensorStatus.NORMAL else SensorStatus.OFFLINE,
+            description = "Temperature & Humidity"
         ),
         SensorData(
             name = "IMU",
             icon = Icons.Filled.Explore,
-            currentValue = "45.2°",
-            unit = "Orientation",
-            status = SensorStatus.NORMAL,
+            currentValue = String.format("%.2f", imuData?.accel_g?.x ?: 0.0),
+            unit = "g (accel-x)",
+            status = if (imuData != null) SensorStatus.NORMAL else SensorStatus.OFFLINE,
             description = "Motion & orientation"
         ),
         SensorData(
             name = "GSR",
             icon = Icons.Filled.BatteryChargingFull,
-            currentValue = "2.8",
-            unit = "μS",
-            status = SensorStatus.WARNING,
-            description = "Stress level"
+            currentValue = String.format("%.0f", gsrData?.stress_level_0_100 ?: 0.0),
+            unit = "Stress Level",
+            status = when {
+                gsrData == null -> SensorStatus.OFFLINE
+                (gsrData?.stress_level_0_100 ?: 0.0) > 70 -> SensorStatus.CRITICAL
+                (gsrData?.stress_level_0_100 ?: 0.0) > 50 -> SensorStatus.WARNING
+                else -> SensorStatus.NORMAL
+            },
+            description = "Stress monitoring"
         ),
         SensorData(
-            name = "Heart Rate",
-            icon = Icons.Filled.Favorite,
-            currentValue = "78",
-            unit = "BPM",
-            status = SensorStatus.NORMAL,
-            description = "Cardiac monitoring"
+            name = "GPS",
+            icon = Icons.Filled.LocationOn,
+            currentValue = "--",
+            unit = "No disponible",
+            status = SensorStatus.OFFLINE,
+            description = "Location tracking"
         )
     )
 
@@ -92,12 +119,12 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 SensorCard(
-                    sensor = sensors[0],
+                    sensor = sensors[3], // GPS
                     onClick = { onSensorClick("GPS") },
                     modifier = Modifier.weight(1f)
                 )
                 SensorCard(
-                    sensor = sensors[1],
+                    sensor = sensors[1], // IMU
                     onClick = { onSensorClick("IMU") },
                     modifier = Modifier.weight(1f)
                 )
@@ -107,20 +134,19 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 SensorCard(
-                    sensor = sensors[2],
+                    sensor = sensors[2], // GSR
                     onClick = { onSensorClick("GSR") },
                     modifier = Modifier.weight(1f)
                 )
                 SensorCard(
-                    sensor = sensors[3],
+                    sensor = sensors[0], // Heart Rate (DHT22)
                     onClick = { onSensorClick("HeartRate") },
                     modifier = Modifier.weight(1f)
                 )
             }
+            Spacer(modifier = Modifier.height(24.dp))
+            StatusSummaryCard(sensors)
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        StatusSummaryCard(sensors)
     }
 }
 
@@ -132,22 +158,24 @@ fun SensorCard(
 ) {
     Card(
         modifier = modifier
-            .height(160.dp)
-            .clickable { onClick() },
+            .height(180.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = colorResource(id = R.color.card_background)),
+        colors = CardDefaults.cardColors(
+            containerColor = colorResource(id = R.color.card_background)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = sensor.icon,
@@ -155,7 +183,7 @@ fun SensorCard(
                     tint = colorResource(id = R.color.military_khaki),
                     modifier = Modifier.size(32.dp)
                 )
-                StatusIndicator(sensor.status)
+                StatusIndicator(status = sensor.status)
             }
 
             Column {
@@ -167,7 +195,7 @@ fun SensorCard(
                 )
                 Text(
                     text = sensor.unit,
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = colorResource(id = R.color.military_khaki).copy(alpha = 0.7f)
                 )
             }
@@ -175,7 +203,7 @@ fun SensorCard(
             Text(
                 text = sensor.name,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Medium,
                 color = colorResource(id = R.color.military_khaki)
             )
         }
@@ -184,29 +212,28 @@ fun SensorCard(
 
 @Composable
 fun StatusIndicator(status: SensorStatus) {
-    val colorId = when (status) {
-        SensorStatus.NORMAL -> R.color.status_normal
-        SensorStatus.WARNING -> R.color.status_warning
-        SensorStatus.CRITICAL -> R.color.status_critical
-        SensorStatus.OFFLINE -> R.color.status_offline
+    val color = when (status) {
+        SensorStatus.NORMAL -> Color.Green
+        SensorStatus.WARNING -> Color.Yellow
+        SensorStatus.CRITICAL -> Color.Red
+        SensorStatus.OFFLINE -> Color.Gray
     }
+
     Box(
         modifier = Modifier
             .size(12.dp)
-            .background(colorResource(id = colorId), shape = RoundedCornerShape(6.dp))
+            .background(color, shape = RoundedCornerShape(6.dp))
     )
 }
 
 @Composable
 fun StatusSummaryCard(sensors: List<SensorData>) {
-    val normalCount = sensors.count { it.status == SensorStatus.NORMAL }
-    val warningCount = sensors.count { it.status == SensorStatus.WARNING }
-    val criticalCount = sensors.count { it.status == SensorStatus.CRITICAL }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = colorResource(id = R.color.card_background))
+        colors = CardDefaults.cardColors(
+            containerColor = colorResource(id = R.color.card_background)
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -215,34 +242,40 @@ fun StatusSummaryCard(sensors: List<SensorData>) {
                 text = "System Status",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = colorResource(id = R.color.military_khaki)
+                color = colorResource(id = R.color.military_khaki),
+                modifier = Modifier.padding(bottom = 12.dp)
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                StatusItem("Normal", normalCount, R.color.status_normal)
-                StatusItem("Warning", warningCount, R.color.status_warning)
-                StatusItem("Critical", criticalCount, R.color.status_critical)
+
+            sensors.forEach { sensor ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        StatusIndicator(status = sensor.status)
+                        Text(
+                            text = sensor.name,
+                            color = colorResource(id = R.color.military_khaki)
+                        )
+                    }
+                    Text(
+                        text = when (sensor.status) {
+                            SensorStatus.NORMAL -> "Normal"
+                            SensorStatus.WARNING -> "Warning"
+                            SensorStatus.CRITICAL -> "Critical"
+                            SensorStatus.OFFLINE -> "Offline"
+                        },
+                        color = colorResource(id = R.color.military_khaki).copy(alpha = 0.7f),
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-fun StatusItem(label: String, count: Int, colorId: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .background(colorResource(id = colorId), shape = RoundedCornerShape(5.dp))
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = "$label: $count",
-            fontSize = 14.sp,
-            color = colorResource(id = R.color.military_khaki)
-        )
     }
 }

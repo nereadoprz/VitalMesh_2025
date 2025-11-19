@@ -1,4 +1,3 @@
-// ui/dashboard/IMUDetailScreen.kt
 package com.example.vitalmesh.dashboard
 
 import androidx.compose.foundation.background
@@ -7,17 +6,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vitalmesh.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun IMUDetailScreen(onBackClick: () -> Unit) {
+fun IMUDetailScreen(
+    onBackClick: () -> Unit,
+    viewModel: SensorViewModel = viewModel()
+) {
+    val imuData by viewModel.imuData.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -70,33 +76,29 @@ fun IMUDetailScreen(onBackClick: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "Accelerometer",
+                        "Accelerometer (g)",
                         color = colorResource(id = R.color.military_khaki),
                         fontWeight = FontWeight.Bold
                     )
-                    IMUInfoRow("X:", "0.12 m/s²")
-                    IMUInfoRow("Y:", "-0.05 m/s²")
-                    IMUInfoRow("Z:", "9.81 m/s²")
+                    IMUInfoRow("X:", String.format("%.2f g", imuData?.accel_g?.x ?: 0.0))
+                    IMUInfoRow("Y:", String.format("%.2f g", imuData?.accel_g?.y ?: 0.0))
+                    IMUInfoRow("Z:", String.format("%.2f g", imuData?.accel_g?.z ?: 0.0))
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        "Gyroscope",
+                        "Gyroscope (deg/s)",
                         color = colorResource(id = R.color.military_khaki),
                         fontWeight = FontWeight.Bold
                     )
-                    IMUInfoRow("Roll:", "2.3°")
-                    IMUInfoRow("Pitch:", "-1.8°")
-                    IMUInfoRow("Yaw:", "45.2°")
+                    IMUInfoRow("X:", String.format("%.2f °/s", imuData?.gyro_deg_s?.x ?: 0.0))
+                    IMUInfoRow("Y:", String.format("%.2f °/s", imuData?.gyro_deg_s?.y ?: 0.0))
+                    IMUInfoRow("Z:", String.format("%.2f °/s", imuData?.gyro_deg_s?.z ?: 0.0))
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
-                        "Magnetometer",
-                        color = colorResource(id = R.color.military_khaki),
-                        fontWeight = FontWeight.Bold
-                    )
-                    IMUInfoRow("Heading:", "287° (W)")
+                    IMUInfoRow("Device ID:", imuData?.id ?: "--")
+                    IMUInfoRow("Timestamp:", "${imuData?.timestamp_ms ?: "--"}")
                 }
             }
         }
@@ -111,13 +113,13 @@ fun IMUInfoRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            color = colorResource(id = R.color.military_khaki).copy(alpha = 0.7f),
-            fontSize = 14.sp
+            color = colorResource(id = R.color.military_khaki),
+            fontSize = 16.sp
         )
         Text(
             text = value,
             color = colorResource(id = R.color.military_khaki),
-            fontSize = 14.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold
         )
     }
