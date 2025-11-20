@@ -1,4 +1,3 @@
-// ui/dashboard/GPSDetailScreen.kt
 package com.example.vitalmesh.dashboard
 
 import androidx.compose.foundation.background
@@ -7,17 +6,29 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vitalmesh.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GPSDetailScreen(onBackClick: () -> Unit) {
+fun GPSDetailScreen(
+    onBackClick: () -> Unit,
+    viewModel: SensorViewModel = viewModel()
+) {
+    val gpsData by viewModel.gpsData.collectAsState()
+
+    val latitudeText = gpsData?.latitude?.toString() ?: "--"
+    val longitudeText = gpsData?.longitude?.toString() ?: "--"
+    val altitudeText = gpsData?.alt?.toString() ?: "--"
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -71,12 +82,9 @@ fun GPSDetailScreen(onBackClick: () -> Unit) {
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    GPSInfoRow("Latitude:", "34.0522° N")
-                    GPSInfoRow("Longitude:", "118.2437° W")
-                    GPSInfoRow("Altitude:", "71 m")
-                    GPSInfoRow("Speed:", "0 km/h")
-                    GPSInfoRow("Accuracy:", "5.2 m")
-                    GPSInfoRow("Satellites:", "12/24")
+                    GPSInfoRow("Latitude:", latitudeText)
+                    GPSInfoRow("Longitude:", longitudeText)
+                    GPSInfoRow("Altitude:", "$altitudeText m")
                 }
             }
 
@@ -95,7 +103,7 @@ fun GPSDetailScreen(onBackClick: () -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "📍 Map (Integrate Google Maps here)",
+                        text = "Map Placeholder",
                         color = colorResource(id = R.color.military_khaki),
                         fontSize = 16.sp
                     )

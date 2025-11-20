@@ -25,6 +25,9 @@ class SensorViewModel : ViewModel() {
     private val _ecgData = MutableStateFlow<ECGData?>(null)
     val ecgData: StateFlow<ECGData?> = _ecgData
 
+    private val _gpsData = MutableStateFlow<GPSData?>(null)
+    val gpsData: StateFlow<GPSData?> = _gpsData
+
     private val _gsrData = MutableStateFlow<GSRData?>(null)
     val gsrData: StateFlow<GSRData?> = _gsrData
 
@@ -51,14 +54,13 @@ class SensorViewModel : ViewModel() {
         viewModelScope.launch {
             while (isActive) {
                 pollAllSensors()
-                delay(3000L)  // Actualizar cada 3 segundos
+                delay(3000L)
             }
         }
     }
 
     private suspend fun pollAllSensors() {
         try {
-            // Activar indicador de actualización
             _isUpdating.value = true
 
             // Leer DHT22
@@ -70,6 +72,11 @@ class SensorViewModel : ViewModel() {
             val ecgSnapshot = sensorsRef.child("ECG").get().await()
             _ecgData.value = ecgSnapshot.getValue(ECGData::class.java)
             Log.d("SensorViewModel", "ECG Data: ${_ecgData.value}")
+
+            // Leer GPS
+            val gpsSnapshot = sensorsRef.child("GPS").get().await()
+            _gpsData.value = gpsSnapshot.getValue(GPSData::class.java)
+            Log.d("SensorViewModel", "GPS Data: ${_gpsData.value}")
 
             // Leer GSR
             val gsrSnapshot = sensorsRef.child("GSR").get().await()
@@ -83,7 +90,6 @@ class SensorViewModel : ViewModel() {
 
             _isLoading.value = false
 
-            // Desactivar indicador después de 500ms (efecto de parpadeo)
             delay(500L)
             _isUpdating.value = false
 
@@ -138,7 +144,7 @@ class SensorViewModel : ViewModel() {
             _gsrHistoricalData.value = last40Samples
             Log.d(
                 "SensorViewModel",
-                "GSR Historical Data polled: ${last40Samples.size} samples (total available: ${dataPoints.size})"
+                "GSR Historical Data polled: ${last40Samples.size} samples"
             )
         } catch (e: Exception) {
             Log.e("SensorViewModel", "Error polling GSR historical data", e)

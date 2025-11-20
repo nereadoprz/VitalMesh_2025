@@ -13,15 +13,22 @@ data class DHT22Data(
     var temperature_C: Double = 0.0
 )
 
-// ↓↓↓ NUEVO: Modelo para ECG (Heart Rate) ↓↓↓
+// Modelo para ECG (Heart Rate)
 data class ECGData(
     @get:PropertyName("heart_rate_bpm")
     @set:PropertyName("heart_rate_bpm")
-    var heart_rate_bpm: Int = 0,
-
-    var id: String = ""
+    var heart_rate_bpm: Int = 0
 )
-// ↑↑↑ FIN NUEVO ↑↑↑
+
+// Modelo para GPS
+data class GPSData(
+    var latitude: Double = 0.0,
+    var longitude: Double = 0.0,
+    var alt: Double = 0.0,
+    @get:PropertyName("timestamp_ms")
+    @set:PropertyName("timestamp_ms")
+    var timestamp_ms: Long = 0L
+)
 
 // Modelo para GSR
 data class GSRData(
@@ -61,8 +68,6 @@ data class IMUData(
     @get:PropertyName("gyro_deg_s")
     @set:PropertyName("gyro_deg_s")
     var gyro_deg_s: GyroData = GyroData(),
-
-    var id: String = "",
 
     @get:PropertyName("timestamp_ms")
     @set:PropertyName("timestamp_ms")
