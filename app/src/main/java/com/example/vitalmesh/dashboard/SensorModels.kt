@@ -2,16 +2,26 @@ package com.example.vitalmesh.dashboard
 
 import com.google.firebase.database.PropertyName
 
-// Modelo para DHT22 (Heart Rate)
+// Modelo para DHT22
 data class DHT22Data(
     @get:PropertyName("humidity_%")
     @set:PropertyName("humidity_%")
-    var humidity_percent: Double = 0.0,  // Firebase usa humidity_%, mapeamos a humidity_percent
+    var humidity_percent: Double = 0.0,
 
     @get:PropertyName("temperature_C")
     @set:PropertyName("temperature_C")
     var temperature_C: Double = 0.0
 )
+
+// ↓↓↓ NUEVO: Modelo para ECG (Heart Rate) ↓↓↓
+data class ECGData(
+    @get:PropertyName("heart_rate_bpm")
+    @set:PropertyName("heart_rate_bpm")
+    var heart_rate_bpm: Int = 0,
+
+    var id: String = ""
+)
+// ↑↑↑ FIN NUEVO ↑↑↑
 
 // Modelo para GSR
 data class GSRData(
@@ -57,4 +67,10 @@ data class IMUData(
     @get:PropertyName("timestamp_ms")
     @set:PropertyName("timestamp_ms")
     var timestamp_ms: Long = 0L
+)
+
+// Modelo para puntos históricos del GSR
+data class GSRHistoricalPoint(
+    val sampleNumber: Long,
+    val stressLevel: Double
 )

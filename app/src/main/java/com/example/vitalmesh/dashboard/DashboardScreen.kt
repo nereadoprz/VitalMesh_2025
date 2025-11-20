@@ -1,9 +1,10 @@
-// ui/dashboard/DashboardScreen.kt
 package com.example.vitalmesh.dashboard
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.colorResource
@@ -23,7 +25,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vitalmesh.R
 import kotlin.math.sqrt
 
-// Enums and data classes
 enum class SensorStatus {
     NORMAL, WARNING, CRITICAL, OFFLINE
 }
@@ -43,9 +44,11 @@ fun DashboardScreen(
     viewModel: SensorViewModel = viewModel()
 ) {
     val dht22Data by viewModel.dht22Data.collectAsState()
+    val ecgData by viewModel.ecgData.collectAsState()
     val gsrData by viewModel.gsrData.collectAsState()
     val imuData by viewModel.imuData.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isUpdating by viewModel.isUpdating.collectAsState()
 
     if (isLoading) {
         Box(
@@ -70,13 +73,15 @@ fun DashboardScreen(
                 it.gyro_deg_s.z * it.gyro_deg_s.z)
     } ?: 0.0
 
+    // Use centralized logic from ViewModel
     val movementState = when {
         imuData == null -> "Offline"
-        imuMagnitude < 0.2 -> "⚠️ Free Fall"
-        imuMagnitude in 0.8..1.2 && gyroMagnitude < 10 -> "Stationary"
-        gyroMagnitude > 50 -> "Rotating"
-        imuMagnitude > 2.0 -> "Active"
-        else -> "🚶 Moving"
+        else -> viewModel.determineMovementState(imuMagnitude, gyroMagnitude)
+    }
+
+    val imuStatus = when {
+        imuData == null -> SensorStatus.OFFLINE
+        else -> viewModel.determineMovementStatus(imuMagnitude, gyroMagnitude)
     }
 
     // Create sensor list with real Firebase data
@@ -84,9 +89,13 @@ fun DashboardScreen(
         SensorData(
             name = "Heart Rate",
             icon = Icons.Filled.Favorite,
-            currentValue = "72",  // Static
+            currentValue = "${ecgData?.heart_rate_bpm ?: "--"}",
             unit = "BPM",
-            status = SensorStatus.NORMAL,
+            status = when {
+                ecgData == null -> SensorStatus.OFFLINE
+                ecgData!!.heart_rate_bpm < 50 || ecgData!!.heart_rate_bpm > 120 -> SensorStatus.WARNING
+                else -> SensorStatus.NORMAL
+            },
             description = "Cardiovascular monitoring"
         ),
         SensorData(
@@ -94,12 +103,7 @@ fun DashboardScreen(
             icon = Icons.Filled.Explore,
             currentValue = movementState,
             unit = String.format("%.2f g", imuMagnitude),
-            status = when {
-                imuData == null -> SensorStatus.OFFLINE
-                imuMagnitude < 0.2 -> SensorStatus.CRITICAL
-                gyroMagnitude > 50 -> SensorStatus.WARNING
-                else -> SensorStatus.NORMAL
-            },
+            status = imuStatus,
             description = "Motion & orientation"
         ),
         SensorData(
@@ -131,13 +135,23 @@ fun DashboardScreen(
             .background(colorResource(id = R.color.military_green))
             .padding(16.dp)
     ) {
-        Text(
-            text = "Sensor Dashboard",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = colorResource(id = R.color.military_khaki),
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Sensor Dashboard",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = colorResource(id = R.color.military_khaki)
+            )
+
+            // Indicador de actualización (luz azul parpadeante)
+            UpdateIndicator(isUpdating = isUpdating)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -149,11 +163,13 @@ fun DashboardScreen(
                 SensorCard(
                     sensor = sensors[3], // GPS
                     onClick = { onSensorClick("GPS") },
+                    isUpdating = isUpdating,
                     modifier = Modifier.weight(1f)
                 )
                 SensorCard(
                     sensor = sensors[1], // IMU
                     onClick = { onSensorClick("IMU") },
+                    isUpdating = isUpdating,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -164,11 +180,13 @@ fun DashboardScreen(
                 SensorCard(
                     sensor = sensors[2], // GSR
                     onClick = { onSensorClick("GSR") },
+                    isUpdating = isUpdating,
                     modifier = Modifier.weight(1f)
                 )
                 SensorCard(
                     sensor = sensors[0], // Heart Rate
                     onClick = { onSensorClick("HeartRate") },
+                    isUpdating = isUpdating,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -179,9 +197,43 @@ fun DashboardScreen(
 }
 
 @Composable
+fun UpdateIndicator(isUpdating: Boolean) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        if (isUpdating) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .alpha(alpha)
+                    .background(Color(0xFF2196F3), shape = CircleShape)
+            )
+            Text(
+                text = "Updating...",
+                color = colorResource(id = R.color.military_khaki).copy(alpha = 0.7f),
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
+@Composable
 fun SensorCard(
     sensor: SensorData,
     onClick: () -> Unit,
+    isUpdating: Boolean,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -211,7 +263,20 @@ fun SensorCard(
                     tint = colorResource(id = R.color.military_khaki),
                     modifier = Modifier.size(32.dp)
                 )
-                StatusIndicator(status = sensor.status)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Indicador de actualización por sensor
+                    if (isUpdating) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(Color(0xFF2196F3), shape = CircleShape)
+                        )
+                    }
+                    StatusIndicator(status = sensor.status)
+                }
             }
 
             Column {

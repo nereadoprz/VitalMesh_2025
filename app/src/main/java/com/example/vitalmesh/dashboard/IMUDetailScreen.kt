@@ -44,20 +44,9 @@ fun IMUDetailScreen(
                 it.gyro_deg_s.z * it.gyro_deg_s.z)
     } ?: 0.0
 
-    // Determine movement state
-    val movementState = when {
-        accelMagnitude < 0.2 -> "Free Fall ⚠️"
-        accelMagnitude in 0.8..1.2 && gyroMagnitude < 10 -> "Stationary ✅"
-        gyroMagnitude > 50 -> "Fast Rotation 🔄"
-        accelMagnitude > 2.0 -> "Intense Movement 🏃"
-        else -> "Gentle Movement 🚶"
-    }
-
-    val movementColor = when {
-        accelMagnitude < 0.2 -> Color.Red
-        accelMagnitude in 0.8..1.2 && gyroMagnitude < 10 -> Color.Green
-        else -> Color.Yellow
-    }
+    // Use centralized logic from ViewModel
+    val movementState = viewModel.determineMovementState(accelMagnitude, gyroMagnitude)
+    val movementColor = viewModel.determineMovementColor(accelMagnitude, gyroMagnitude)
 
     Column(
         modifier = Modifier
@@ -144,7 +133,7 @@ fun IMUDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "🚀 Accelerometer",
+                            "Accelerometer",
                             color = colorResource(id = R.color.military_khaki),
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -179,7 +168,7 @@ fun IMUDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "🔄 Gyroscope",
+                            "Gyroscope",
                             color = colorResource(id = R.color.military_khaki),
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -209,15 +198,17 @@ fun IMUDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "💡 Info:",
+                        "Info:",
                         color = colorResource(id = R.color.military_khaki),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
                     Text(
-                        "• Accelerometer: measures linear acceleration (g)\n" +
+                        "• Accelerometer: measures acceleration + gravity component (~1g at rest)\n" +
                                 "• Gyroscope: measures rotational velocity (°/s)\n" +
-                                "• At rest: accel ≈ 1g, gyro ≈ 0°/s",
+                                "• At rest: accel ≈ 1g, gyro ≈ 0°/s\n" +
+                                "• Free fall: accel < 0.5g (rare event)\n" +
+                                "• Tilt affects the 1g reading based on device orientation",
                         color = colorResource(id = R.color.military_khaki).copy(alpha = 0.7f),
                         fontSize = 12.sp
                     )

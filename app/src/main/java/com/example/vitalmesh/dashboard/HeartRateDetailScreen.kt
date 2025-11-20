@@ -7,6 +7,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -14,11 +16,25 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vitalmesh.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HeartRateDetailScreen(onBackClick: () -> Unit) {
+fun HeartRateDetailScreen(
+    onBackClick: () -> Unit,
+    viewModel: SensorViewModel = viewModel()
+) {
+    val ecgData by viewModel.ecgData.collectAsState()
+    val currentHeartRate = ecgData?.heart_rate_bpm ?: 0
+
+    val heartRateColor = when {
+        currentHeartRate == 0 -> Color.Gray
+        currentHeartRate < 50 -> Color.Yellow
+        currentHeartRate > 120 -> Color.Red
+        else -> Color.Green
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -71,8 +87,8 @@ fun HeartRateDetailScreen(onBackClick: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "Current BPM: 78",
-                        color = Color.Green,
+                        text = "Current BPM: ${if (currentHeartRate > 0) currentHeartRate else "--"}",
+                        color = heartRateColor,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -81,7 +97,7 @@ fun HeartRateDetailScreen(onBackClick: () -> Unit) {
                     HeartRateInfoRow("Minimum (today):", "62 BPM")
                     HeartRateInfoRow("Maximum (today):", "92 BPM")
                     HeartRateInfoRow("Average (today):", "74 BPM")
-                    HeartRateInfoRow("Status:", "Normal ✅")
+                    HeartRateInfoRow("Status:", "Normal")
                     HeartRateInfoRow("Heart Zone:", "Zone 2 (Aerobic)")
                 }
             }
@@ -101,7 +117,7 @@ fun HeartRateDetailScreen(onBackClick: () -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "❤️ BPM Chart (Last 24h)",
+                        text = "BPM Chart (Last 24h)",
                         color = colorResource(id = R.color.military_khaki),
                         fontSize = 14.sp
                     )
