@@ -23,13 +23,16 @@ import com.google.maps.android.compose.rememberMarkerState
 fun GPSScreen() {
     var currentLocation by remember { mutableStateOf<LatLng?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var currentAlt by remember { mutableStateOf<Double?>(null) }
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(currentLocation ?: LatLng(40.7128, -74.0060), 15f)
+        position = CameraPosition.fromLatLngZoom(currentLocation ?: LatLng(40.713, -74.006), 15f)
     }
 
+    // Solo se ejecuta al entrar
     LaunchedEffect(Unit) {
-        FirebaseLocationService.getUserCurrentLocation { lat, lng ->
+        FirebaseLocationService.getUserCurrentLocation { lat, lng, alt ->
             currentLocation = LatLng(lat, lng)
+            currentAlt = alt
             isLoading = false
         }
     }
@@ -62,7 +65,14 @@ fun GPSScreen() {
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            if (isLoading) "⏳ Loading location..." else "Lat: ${currentLocation?.latitude} | Lng: ${currentLocation?.longitude}",
+            if (isLoading)
+                "⏳ Loading location..."
+            else
+                "Lat: %.3f | Lng: %.3f | Alt: %s".format(
+                    currentLocation?.latitude ?: 0.0,
+                    currentLocation?.longitude ?: 0.0,
+                    currentAlt?.let { "%.1f m".format(it) } ?: "--"
+                ),
             color = colorResource(id = R.color.military_khaki),
             fontSize = 12.sp,
             modifier = Modifier.padding(12.dp)
