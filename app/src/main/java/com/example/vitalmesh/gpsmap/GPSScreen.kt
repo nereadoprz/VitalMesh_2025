@@ -62,7 +62,7 @@ fun GPSScreen() {
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            if (isLoading) "⏳ Cargando ubicación..." else "Lat: ${currentLocation?.latitude} | Lng: ${currentLocation?.longitude}",
+            if (isLoading) "⏳ Loading location..." else "Lat: ${currentLocation?.latitude} | Lng: ${currentLocation?.longitude}",
             color = colorResource(id = R.color.military_khaki),
             fontSize = 12.sp,
             modifier = Modifier.padding(12.dp)
