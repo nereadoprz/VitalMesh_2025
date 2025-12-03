@@ -2,6 +2,8 @@
 package com.example.vitalmesh
 
 //Para el Logout.
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.credentials.CredentialManager
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.compose.foundation.Image
@@ -27,9 +29,13 @@ import com.example.vitalmesh.navigation.NavigationGraph
 import com.example.vitalmesh.profile.MilitaryProfileScreen
 import com.example.vitalmesh.profile.MilitaryProfileViewModel
 import com.example.vitalmesh.gpsmap.GPSScreen
+import com.example.vitalmesh.chat.ChatScreen
+import com.example.vitalmesh.chat.MockChatData
+
 
 data class TabItem(val label: String, val icon: ImageVector)
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -155,7 +161,11 @@ fun HomeScreen(
                     )
                 }
                 1 -> GPSScreen() // Llama el mapa del sensor GPS (fullscreen)
-                2 -> ChatContent(user)
+                2 -> ChatScreen(
+                    onChatSelected = { conversation ->
+                        println("Chat seleccionado: ${conversation.user.name}")
+                    }
+                )
                 3 -> MilitaryProfileScreen(
                     viewModel = militaryProfileViewModel,
                     onLogout = {
