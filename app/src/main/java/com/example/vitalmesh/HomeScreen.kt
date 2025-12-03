@@ -4,7 +4,6 @@ package com.example.vitalmesh
 //Para el Logout.
 import androidx.credentials.CredentialManager
 import androidx.credentials.ClearCredentialStateRequest
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,13 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.example.vitalmesh.R
 import com.example.vitalmesh.navigation.NavigationGraph
-//Profile files
 import com.example.vitalmesh.profile.MilitaryProfileScreen
 import com.example.vitalmesh.profile.MilitaryProfileViewModel
-
 import com.example.vitalmesh.gpsmap.GPSScreen
-
-
 
 data class TabItem(val label: String, val icon: ImageVector)
 
@@ -45,7 +40,6 @@ fun HomeScreen(
     onLogout: () -> Unit // optional if you still use elsewhere
 ) {
     val navController = rememberNavController()
-
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf(
         TabItem("Dashboard", Icons.Filled.MilitaryTech),
@@ -53,7 +47,6 @@ fun HomeScreen(
         TabItem("Chat", Icons.Filled.Chat),
         TabItem("Profile", Icons.Filled.Person),
     )
-
 
     //Profile user var...
     val militaryProfileViewModel = remember { MilitaryProfileViewModel() }
@@ -90,6 +83,7 @@ fun HomeScreen(
                                     .align(Alignment.Center)
                             )
                         }
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(end = 32.dp)
@@ -100,7 +94,9 @@ fun HomeScreen(
                                     .clip(CircleShape)
                                     .background(if (monitoringActive) Color.Green else Color.Red)
                             )
+
                             Spacer(Modifier.width(8.dp))
+
                             Text(
                                 text = if (monitoringActive) "Monitoring Active" else "Monitoring Inactive",
                                 style = MaterialTheme.typography.titleMedium,
@@ -118,10 +114,11 @@ fun HomeScreen(
                 .background(colorResource(id = R.color.military_olive))
                 .fillMaxSize()
         ) {
-            Spacer(modifier = Modifier
-                .height(16.dp)
-                .fillMaxWidth()
-                .background(colorResource(id = R.color.military_green))
+            Spacer(
+                modifier = Modifier
+                    .height(16.dp)
+                    .fillMaxWidth()
+                    .background(colorResource(id = R.color.military_green))
             )
 
             TabRow(
@@ -134,7 +131,11 @@ fun HomeScreen(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
                         icon = {
-                            Icon(tab.icon, contentDescription = tab.label, tint = colorResource(id = R.color.military_khaki))
+                            Icon(
+                                tab.icon,
+                                contentDescription = tab.label,
+                                tint = colorResource(id = R.color.military_khaki)
+                            )
                         },
                         text = {
                             Text(tab.label, color = colorResource(id = R.color.military_khaki))
@@ -147,9 +148,13 @@ fun HomeScreen(
 
             when (selectedTab) {
                 0 -> {
-                    NavigationGraph(navController)
+                    // ✅ CAMBIO: Agregado callback para cambiar a tab GPS
+                    NavigationGraph(
+                        navController = navController,
+                        onNavigateToGPSTab = { selectedTab = 1 }
+                    )
                 }
-                1 -> GPSScreen()  // Llama el mapa del sensor GPS
+                1 -> GPSScreen() // Llama el mapa del sensor GPS (fullscreen)
                 2 -> ChatContent(user)
                 3 -> MilitaryProfileScreen(
                     viewModel = militaryProfileViewModel,
@@ -199,9 +204,13 @@ fun ProfileContent(user: User, onLogout: () -> Unit) {
             color = colorResource(id = R.color.military_khaki),
             style = MaterialTheme.typography.titleMedium
         )
+
         Spacer(Modifier.height(16.dp))
+
         Text("Fill in/edit personal details and calibration", color = colorResource(id = R.color.military_khaki))
+
         Spacer(Modifier.height(24.dp))
+
         Button(
             onClick = onLogout,
             colors = ButtonDefaults.buttonColors(containerColor = Color.Red)

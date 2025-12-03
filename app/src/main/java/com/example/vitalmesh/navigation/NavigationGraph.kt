@@ -20,10 +20,14 @@ object NavigationDestinations {
     const val HEARTRATE_DETAIL = "heartrate_detail"
 }
 
+// ✅ NUEVO: Typealias para el callback
+typealias OnNavigateToGPSTab = () -> Unit
+
 @Suppress("UNUSED_PARAMETER")
 @Composable
 fun NavigationGraph(
-    navController: NavHostController
+    navController: NavHostController,
+    onNavigateToGPSTab: OnNavigateToGPSTab = {}  // ✅ NUEVO PARÁMETRO
 ) {
     NavHost(
         navController = navController,
@@ -47,7 +51,8 @@ fun NavigationGraph(
         // Pantalla detallada: GPS
         composable(NavigationDestinations.GPS_DETAIL) {
             GPSDetailScreen(
-                onBackClick = { navController.popBackStack() }  // Volver atrás
+                onBackClick = { navController.popBackStack() },
+                onRequestFullscreenMap = onNavigateToGPSTab  // ✅ AGREGADO: Pasa el callback
             )
         }
 
@@ -73,4 +78,3 @@ fun NavigationGraph(
         }
     }
 }
-
