@@ -1,3 +1,4 @@
+// chat/ChatDetailScreen.kt
 package com.example.vitalmesh.chat
 
 import android.os.Build
@@ -58,7 +59,7 @@ fun ChatDetailScreen(
     onBackClick: () -> Unit
 ) {
     var messageText by remember { mutableStateOf("") }
-    var messages by remember { mutableStateOf(conversation.messages.toMutableList()) }
+    var messages by remember { mutableStateOf(conversation.messages) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(messages.size) {
@@ -107,7 +108,7 @@ fun ChatDetailScreen(
                         timestamp = LocalDateTime.now(),
                         isFromCurrentUser = true
                     )
-                    messages.add(newMessage)
+                    messages = messages + newMessage
                     messageText = ""
                 }
             }
